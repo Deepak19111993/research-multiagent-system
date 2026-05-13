@@ -98,7 +98,7 @@ Write a well-structured blog post with an engaging introduction, informative bod
 """
 
     response = client.models.generate_content(
-        model='gemini-2.5-flash',
+        model='gemini-1.5-flash',
         contents=prompt,
     )
     
@@ -129,7 +129,7 @@ Provide your report in Markdown format. Highlight strengths, suggest areas for i
 """
 
     response = client.models.generate_content(
-        model='gemini-2.5-flash',
+        model='gemini-1.5-flash',
         contents=prompt,
     )
     
