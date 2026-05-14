@@ -5,3 +5,7 @@ google-genai
 python-dotenv
 openai
 anthropic
+markdown
+fpdf2
+python-docx
+streamlit-google-auth

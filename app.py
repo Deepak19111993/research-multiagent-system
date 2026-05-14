@@ -2,11 +2,92 @@ import streamlit as st
 import os
 from dotenv import load_dotenv
 from agents import searcher_agent, reader_agent, writer_agent, critic_agent, parse_score
+from utils import create_markdown_file, create_html_file, create_pdf_file, create_word_file
+from database import init_db, save_blog, get_user_blogs
+import urllib.parse
+import requests
+import json
 
 # Load environment variables from .env file if it exists
 load_dotenv()
 
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
+
 st.set_page_config(page_title="Multi-Agent Research System", page_icon="🕵️", layout="wide")
+
+# Initialize DB
+init_db()
+
+# Custom Robust Google OAuth Flow
+try:
+    with open('google_credentials.json', 'r') as f:
+        creds = json.load(f)['web']
+        
+    client_id = creds['client_id']
+    client_secret = creds['client_secret']
+    auth_uri = creds.get('auth_uri', 'https://accounts.google.com/o/oauth2/auth')
+    token_uri = creds.get('token_uri', 'https://oauth2.googleapis.com/token')
+    # Pulls the first redirect URI from your credentials file
+    redirect_uri = creds.get('redirect_uris', ['http://localhost:8501'])[0]
+    
+    if not st.session_state.get('connected'):
+        st.title("🕵️ Multi-Agent Research System")
+        st.markdown("Please log in with your Google account to access the research agents and save your blogs.")
+        
+        if 'code' in st.query_params:
+            # We got a code from Google, exchange it for a token
+            code = st.query_params['code']
+            data = {
+                'code': code,
+                'client_id': client_id,
+                'client_secret': client_secret,
+                'redirect_uri': redirect_uri,
+                'grant_type': 'authorization_code'
+            }
+            res = requests.post(token_uri, data=data)
+            
+            if res.status_code == 200:
+                access_token = res.json().get('access_token')
+                user_res = requests.get('https://www.googleapis.com/oauth2/v2/userinfo', headers={'Authorization': f'Bearer {access_token}'})
+                
+                if user_res.status_code == 200:
+                    st.session_state['connected'] = True
+                    st.session_state['user_info'] = user_res.json()
+                    st.query_params.clear()
+                    st.rerun()
+                else:
+                    st.error("Failed to fetch user profile from Google.")
+            else:
+                st.error("Login failed. Check your credentials.")
+                st.query_params.clear()
+        else:
+            # Show login button
+            scope = "https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile"
+            auth_url = f"{auth_uri}?client_id={client_id}&redirect_uri={urllib.parse.quote(redirect_uri)}&response_type=code&scope={urllib.parse.quote(scope)}&access_type=online"
+            st.markdown(f'<a href="{auth_url}" target="_self"><button style="background-color:#4285F4;color:white;padding:12px 20px;border-radius:5px;border:none;cursor:pointer;font-weight:bold;font-size:16px;">Login with Google</button></a>', unsafe_allow_html=True)
+            
+        st.stop() # Stop execution until logged in
+
+except FileNotFoundError:
+    st.error("google_credentials.json not found! Please create it.")
+    st.stop()
+except Exception as e:
+    st.error(f"OAuth Setup Error: {str(e)}")
+    st.stop()
+
+# Initialize Session State
+if 'current_view' not in st.session_state:
+    st.session_state.current_view = None
+
+user_info = st.session_state.get('user_info', {})
+user_email = user_info.get('email', 'unknown@example.com')
+
+st.sidebar.markdown(f"Logged in as **{user_info.get('name', 'User')}**")
+if st.sidebar.button("Logout"):
+    st.session_state.clear()
+    st.rerun()
+st.sidebar.markdown("---")
 
 st.title("🕵️ Multi-Agent Research System")
 st.markdown("This system uses 4 distinct agents to research, read, write, and critique a topic of your choice.")
@@ -45,6 +126,28 @@ with st.sidebar:
     st.markdown("3. **Writer Agent**: Writes a valuable blog post.")
     st.markdown("4. **Critic Agent**: Reviews and critiques the post.")
 
+    st.markdown("---")
+    st.markdown("### 📚 Blog History")
+    
+    # Fetch from SQLite database instead of session state
+    user_blogs = get_user_blogs(user_email)
+    
+    if not user_blogs:
+        st.info("No blogs generated yet.")
+    else:
+        # Ensure safe current_view bounds
+        if st.session_state.current_view is None or st.session_state.current_view >= len(user_blogs):
+            st.session_state.current_view = len(user_blogs) - 1
+            
+        history_options = [f"{i+1}. {item['topic']}" for i, item in enumerate(user_blogs)]
+        selected_history_str = st.selectbox(
+            "View Past Generation", 
+            options=history_options, 
+            index=st.session_state.current_view
+        )
+        selected_idx = int(selected_history_str.split('.')[0]) - 1
+        st.session_state.current_view = selected_idx
+        
 topic = st.text_input("Enter the topic you want to research:")
 start_btn = st.button("Start Research 🚀")
 
@@ -103,7 +206,7 @@ if start_btn:
                     status4.update(label=f"Agent 4: Critique Complete! Score: {score}/10", state="complete", expanded=False)
                     
                 if score >= target_score:
-                    st.success(f"Target score reached ({score}/{target_score})!")
+                    st.success(f"Target score reached ({score}/10)!")
                     break
                 else:
                     if attempt < max_iterations:
@@ -113,16 +216,56 @@ if start_btn:
                 
                 attempt += 1
                 
-            # Display Final Outputs
+            # Generation successful, save to history
             st.success("Pipeline executed successfully! 🎉")
             
-            st.markdown("---")
-            st.header("📝 Final Blog Post")
-            st.markdown(blog_post)
+            # Save directly to persistent SQLite database
+            save_blog(user_email, topic, blog_post, critique_report, score)
             
-            st.markdown("---")
-            st.header("🧐 Critic Report")
-            st.markdown(critique_report)
+            # Re-fetch blogs to update the length
+            updated_blogs = get_user_blogs(user_email)
+            st.session_state.current_view = len(updated_blogs) - 1
+            
+            # Streamlit rerun to ensure the sidebar updates immediately
+            st.rerun()
             
         except Exception as e:
             st.error(f"An error occurred: {str(e)}")
+
+# Re-fetch blogs for display block
+user_blogs = get_user_blogs(user_email)
+
+# Always run this block, regardless of start_btn
+if st.session_state.current_view is not None and st.session_state.current_view < len(user_blogs):
+    active_data = user_blogs[st.session_state.current_view]
+    
+    st.markdown("---")
+    st.header(f"📝 Final Blog Post: {active_data['topic']}")
+    st.markdown(active_data['blog_post'])
+    
+    st.markdown("### 📥 Download Options")
+    col1, col2, col3, col4 = st.columns(4)
+    
+    # Prepare files
+    md_bytes = create_markdown_file(active_data['blog_post'])
+    html_bytes = create_html_file(active_data['blog_post'])
+    pdf_bytes = create_pdf_file(active_data['blog_post'])
+    word_bytes = create_word_file(active_data['blog_post'])
+    
+    filename_base = active_data['topic'].lower().replace(" ", "_").replace("/", "_")
+    
+    # Add unique keys for buttons based on current view index to avoid duplicate key errors
+    view_key = st.session_state.current_view
+    
+    with col1:
+        st.download_button("Download Markdown", data=md_bytes, file_name=f"{filename_base}.md", mime="text/markdown", key=f"md_{view_key}")
+    with col2:
+        st.download_button("Download HTML", data=html_bytes, file_name=f"{filename_base}.html", mime="text/html", key=f"html_{view_key}")
+    with col3:
+        st.download_button("Download PDF", data=pdf_bytes, file_name=f"{filename_base}.pdf", mime="application/pdf", key=f"pdf_{view_key}")
+    with col4:
+        st.download_button("Download Word", data=word_bytes, file_name=f"{filename_base}.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", key=f"word_{view_key}")
+    
+    st.markdown("---")
+    st.header("🧐 Critic Report")
+    st.markdown(active_data['critique_report'])
