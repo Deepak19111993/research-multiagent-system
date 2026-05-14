@@ -89,6 +89,10 @@ with st.sidebar:
 topic = st.text_input("Enter the topic you want to research:")
 start_btn = st.button("Start Research 🚀")
 
+# Create an empty placeholder before the slow process starts.
+# This forces Streamlit to immediately clear the old blog from the screen!
+blog_display_area = st.empty()
+
 if start_btn:
     if not tavily_api_key or not llm_api_key:
         st.error(f"Please provide both Tavily and {llm_provider} API keys in the sidebar.")
@@ -175,14 +179,15 @@ user_blogs = get_user_blogs(user_email)
 
 # Only show the previously selected blog if we are NOT currently generating a new one
 if not start_btn and st.session_state.current_view is not None and st.session_state.current_view < len(user_blogs):
-    active_data = user_blogs[st.session_state.current_view]
-    
-    st.markdown("---")
-    st.header(f"📝 Final Blog Post: {active_data['topic']}")
-    st.markdown(active_data['blog_post'])
-    
-    st.markdown("### 📥 Download Options")
-    col1, col2, col3, col4 = st.columns(4)
+    with blog_display_area.container():
+        active_data = user_blogs[st.session_state.current_view]
+        
+        st.markdown("---")
+        st.header(f"📝 Final Blog Post: {active_data['topic']}")
+        st.markdown(active_data['blog_post'])
+        
+        st.markdown("### 📥 Download Options")
+        col1, col2, col3, col4 = st.columns(4)
     
     # Prepare files
     md_bytes = create_markdown_file(active_data['blog_post'])
