@@ -19,13 +19,10 @@ init_db()
 # Simple Username system to replace Google Auth
 st.sidebar.markdown("### 👤 User Profile")
 user_email = st.sidebar.text_input("Enter a username to load your history:", value="default_user")
-st.sidebar.markdown("---")
 
 # Initialize Session State
 if 'current_view' not in st.session_state:
     st.session_state.current_view = None
-
-st.sidebar.markdown("---")
 
 st.title("🕵️ Multi-Agent Research System")
 st.markdown("This system uses 4 distinct agents to research, read, write, and critique a topic of your choice.")
