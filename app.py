@@ -173,8 +173,8 @@ if start_btn:
 # Re-fetch blogs for display block
 user_blogs = get_user_blogs(user_email)
 
-# Always run this block, regardless of start_btn
-if st.session_state.current_view is not None and st.session_state.current_view < len(user_blogs):
+# Only show the previously selected blog if we are NOT currently generating a new one
+if not start_btn and st.session_state.current_view is not None and st.session_state.current_view < len(user_blogs):
     active_data = user_blogs[st.session_state.current_view]
     
     st.markdown("---")
