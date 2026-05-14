@@ -1,7 +1,53 @@
 import requests
 from bs4 import BeautifulSoup
 from google import genai
+import openai
+import anthropic
 import json
+
+def call_llm(provider: str, api_key: str, model_name: str, prompt: str) -> str:
+    """Helper function to call different LLM providers."""
+    if not api_key:
+        raise ValueError(f"{provider} API key is missing.")
+        
+    if provider == "Gemini":
+        client = genai.Client(api_key=api_key)
+        response = client.models.generate_content(
+            model=model_name or 'gemini-2.5-flash',
+            contents=prompt,
+        )
+        return response.text
+        
+    elif provider == "OpenAI":
+        client = openai.OpenAI(api_key=api_key)
+        response = client.chat.completions.create(
+            model=model_name or 'gpt-4o-mini',
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return response.choices[0].message.content
+        
+    elif provider == "Anthropic":
+        client = anthropic.Anthropic(api_key=api_key)
+        response = client.messages.create(
+            model=model_name or 'claude-3-5-sonnet-20241022',
+            max_tokens=2048,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return response.content[0].text
+        
+    elif provider == "OpenRouter":
+        client = openai.OpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=api_key,
+        )
+        response = client.chat.completions.create(
+            model=model_name or 'anthropic/claude-3.5-sonnet',
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return response.choices[0].message.content
+        
+    else:
+        raise ValueError(f"Unsupported provider: {provider}")
 
 def searcher_agent(topic: str, tavily_api_key: str) -> list:
     """
@@ -76,15 +122,10 @@ def reader_agent(search_results: list) -> str:
             
     return detailed_context
 
-def writer_agent(topic: str, search_context: list, detailed_context: str, gemini_api_key: str) -> str:
+def writer_agent(topic: str, search_context: list, detailed_context: str, provider: str, api_key: str, model_name: str) -> str:
     """
-    Agent 3: Uses Gemini to write a readable and valuable blog post based on the context.
+    Agent 3: Uses the selected LLM to write a readable and valuable blog post based on the context.
     """
-    if not gemini_api_key:
-        raise ValueError("Gemini API key is missing.")
-        
-    client = genai.Client(api_key=gemini_api_key)
-    
     prompt = f"""
 You are an expert technical blog writer. Your task is to write a comprehensive, readable, and valuable blog post about the following topic: "{topic}".
 
@@ -96,23 +137,12 @@ Here is detailed content extracted from the web:
 
 Write a well-structured blog post with an engaging introduction, informative body paragraphs with headings, and a clear conclusion. Use Markdown formatting. Make it insightful and easy to read.
 """
+    return call_llm(provider, api_key, model_name, prompt)
 
-    response = client.models.generate_content(
-        model='gemini-2.5-flash',
-        contents=prompt,
-    )
-    
-    return response.text
-
-def critic_agent(topic: str, blog_post: str, gemini_api_key: str) -> str:
+def critic_agent(topic: str, blog_post: str, provider: str, api_key: str, model_name: str) -> str:
     """
-    Agent 4: Uses Gemini to review the blog post and generate a critique report.
+    Agent 4: Uses the selected LLM to review the blog post and generate a critique report.
     """
-    if not gemini_api_key:
-        raise ValueError("Gemini API key is missing.")
-        
-    client = genai.Client(api_key=gemini_api_key)
-    
     prompt = f"""
 You are a strict and insightful editor and critic. You have been given a blog post about the topic: "{topic}".
 
@@ -127,10 +157,4 @@ Please provide a detailed critique report. Evaluate the following:
 
 Provide your report in Markdown format. Highlight strengths, suggest areas for improvement, and conclude with an **Overall Score out of 10** (e.g., "Overall Score: 8/10").
 """
-
-    response = client.models.generate_content(
-        model='gemini-2.5-flash',
-        contents=prompt,
-    )
-    
-    return response.text
+    return call_llm(provider, api_key, model_name, prompt)

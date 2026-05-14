@@ -17,10 +17,26 @@ with st.sidebar:
     
     # Pre-fill from environment variables if available
     default_tavily = os.getenv("TAVILY_API_KEY", "")
-    default_gemini = os.getenv("GEMINI_API_KEY", "")
     
     tavily_api_key = st.text_input("Tavily API Key", value=default_tavily, type="password")
-    gemini_api_key = st.text_input("Gemini API Key", value=default_gemini, type="password")
+    
+    llm_provider = st.selectbox("LLM Provider", ["Anthropic", "Gemini", "OpenAI", "OpenRouter"])
+    
+    if llm_provider == "Anthropic":
+        default_key = os.getenv("ANTHROPIC_API_KEY", "")
+        default_model = "claude-3-5-sonnet-20241022"
+    elif llm_provider == "Gemini":
+        default_key = os.getenv("GEMINI_API_KEY", "")
+        default_model = "gemini-2.5-flash"
+    elif llm_provider == "OpenAI":
+        default_key = os.getenv("OPENAI_API_KEY", "")
+        default_model = "gpt-4o-mini"
+    elif llm_provider == "OpenRouter":
+        default_key = os.getenv("OPENROUTER_API_KEY", "")
+        default_model = "anthropic/claude-3.5-sonnet"
+        
+    llm_api_key = st.text_input(f"{llm_provider} API Key", value=default_key, type="password")
+    model_name = st.text_input("Model Name", value=default_model)
     
     st.markdown("---")
     st.markdown("### Agents Pipeline")
@@ -33,8 +49,8 @@ topic = st.text_input("Enter the topic you want to research:")
 start_btn = st.button("Start Research 🚀")
 
 if start_btn:
-    if not tavily_api_key or not gemini_api_key:
-        st.error("Please provide both Tavily and Gemini API keys in the sidebar.")
+    if not tavily_api_key or not llm_api_key:
+        st.error(f"Please provide both Tavily and {llm_provider} API keys in the sidebar.")
     elif not topic:
         st.warning("Please enter a topic.")
     else:
@@ -58,14 +74,14 @@ if start_btn:
             # Agent 3: Writer
             with st.status("Agent 3: Writing the blog post...", expanded=True) as status3:
                 st.write("Drafting a comprehensive blog post based on the context...")
-                blog_post = writer_agent(topic, search_results, detailed_context, gemini_api_key)
+                blog_post = writer_agent(topic, search_results, detailed_context, llm_provider, llm_api_key, model_name)
                 st.write("Blog post written.")
                 status3.update(label="Agent 3: Writing Complete!", state="complete", expanded=False)
                 
             # Agent 4: Critic
             with st.status("Agent 4: Critiquing the blog post...", expanded=True) as status4:
                 st.write("Reviewing the drafted blog post...")
-                critique_report = critic_agent(topic, blog_post, gemini_api_key)
+                critique_report = critic_agent(topic, blog_post, llm_provider, llm_api_key, model_name)
                 st.write("Critique generated.")
                 status4.update(label="Agent 4: Critique Complete!", state="complete", expanded=False)
                 
