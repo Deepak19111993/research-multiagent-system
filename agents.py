@@ -4,6 +4,7 @@ from google import genai
 import openai
 import anthropic
 import json
+import re
 
 def call_llm(provider: str, api_key: str, model_name: str, prompt: str) -> str:
     """Helper function to call different LLM providers."""
@@ -48,6 +49,28 @@ def call_llm(provider: str, api_key: str, model_name: str, prompt: str) -> str:
         
     else:
         raise ValueError(f"Unsupported provider: {provider}")
+
+def parse_score(critique_report: str) -> int:
+    """Extracts the integer score from the critique report."""
+    # Try the standard Score: X/10 format
+    match = re.search(r'Score:\s*(\d+)/10', critique_report, re.IGNORECASE)
+    if match:
+        try:
+            return int(match.group(1))
+        except ValueError:
+            pass
+            
+    # Fallback for raw <score> tag if it hallucinates
+    match = re.search(r'<score>(\d+)</score>', critique_report, re.IGNORECASE)
+    if match:
+        return int(match.group(1))
+        
+    # Generic fallback
+    match = re.search(r'(\d+)/10', critique_report)
+    if match:
+        return int(match.group(1))
+        
+    return 0
 
 def searcher_agent(topic: str, tavily_api_key: str) -> list:
     """
@@ -122,11 +145,25 @@ def reader_agent(search_results: list) -> str:
             
     return detailed_context
 
-def writer_agent(topic: str, search_context: list, detailed_context: str, provider: str, api_key: str, model_name: str) -> str:
+def writer_agent(topic: str, search_context: list, detailed_context: str, provider: str, api_key: str, model_name: str, previous_draft: str = None, critique: str = None) -> str:
     """
     Agent 3: Uses the selected LLM to write a readable and valuable blog post based on the context.
+    If previous_draft and critique are provided, it refines the draft based on the critique.
     """
-    prompt = f"""
+    if previous_draft and critique:
+        prompt = f"""
+You are an expert technical blog writer. Your task is to improve and refine a blog post about the topic: "{topic}".
+
+Here is the previous draft:
+{previous_draft}
+
+Here is the critique report from an expert editor:
+{critique}
+
+Please rewrite the blog post addressing all the feedback provided in the critique. Ensure the final output is comprehensive, highly readable, well-structured with headings, and uses Markdown formatting.
+"""
+    else:
+        prompt = f"""
 You are an expert technical blog writer. Your task is to write a comprehensive, readable, and valuable blog post about the following topic: "{topic}".
 
 Here are some search snippets for context:
@@ -155,6 +192,8 @@ Please provide a detailed critique report. Evaluate the following:
 3. Structure and formatting
 4. Overall value to the reader
 
-Provide your report in Markdown format. Highlight strengths, suggest areas for improvement, and conclude with an **Overall Score out of 10** (e.g., "Overall Score: 8/10").
+Provide your report in Markdown format. Highlight strengths, suggest areas for improvement, and conclude with an **Overall Score out of 10**.
+
+**CRITICAL REQUIREMENT:** You MUST output the final score exactly in this format at the very end of your response: Score: X/10 (where X is an integer between 1 and 10).
 """
     return call_llm(provider, api_key, model_name, prompt)

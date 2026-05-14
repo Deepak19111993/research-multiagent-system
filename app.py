@@ -1,7 +1,7 @@
 import streamlit as st
 import os
 from dotenv import load_dotenv
-from agents import searcher_agent, reader_agent, writer_agent, critic_agent
+from agents import searcher_agent, reader_agent, writer_agent, critic_agent, parse_score
 
 # Load environment variables from .env file if it exists
 load_dotenv()
@@ -71,19 +71,47 @@ if start_btn:
                 st.write("Finished reading sources.")
                 status2.update(label="Agent 2: Reading Complete!", state="complete", expanded=False)
                 
-            # Agent 3: Writer
-            with st.status("Agent 3: Writing the blog post...", expanded=True) as status3:
-                st.write("Drafting a comprehensive blog post based on the context...")
-                blog_post = writer_agent(topic, search_results, detailed_context, llm_provider, llm_api_key, model_name)
-                st.write("Blog post written.")
-                status3.update(label="Agent 3: Writing Complete!", state="complete", expanded=False)
+            # Iterative Writing and Critiquing
+            max_iterations = 3
+            target_score = 8
+            attempt = 1
+            
+            blog_post = ""
+            critique_report = ""
+            
+            while attempt <= max_iterations:
+                st.markdown(f"### Iteration {attempt}/{max_iterations}")
                 
-            # Agent 4: Critic
-            with st.status("Agent 4: Critiquing the blog post...", expanded=True) as status4:
-                st.write("Reviewing the drafted blog post...")
-                critique_report = critic_agent(topic, blog_post, llm_provider, llm_api_key, model_name)
-                st.write("Critique generated.")
-                status4.update(label="Agent 4: Critique Complete!", state="complete", expanded=False)
+                # Agent 3: Writer
+                with st.status(f"Agent 3: Writing the blog post (Attempt {attempt})...", expanded=True) as status3:
+                    if attempt == 1:
+                        st.write("Drafting a comprehensive blog post based on the context...")
+                        blog_post = writer_agent(topic, search_results, detailed_context, llm_provider, llm_api_key, model_name)
+                    else:
+                        st.write("Refining the blog post based on the critique...")
+                        blog_post = writer_agent(topic, search_results, detailed_context, llm_provider, llm_api_key, model_name, previous_draft=blog_post, critique=critique_report)
+                        
+                    st.write("Blog post written.")
+                    status3.update(label=f"Agent 3: Writing Complete (Attempt {attempt})!", state="complete", expanded=False)
+                    
+                # Agent 4: Critic
+                with st.status(f"Agent 4: Critiquing the blog post (Attempt {attempt})...", expanded=True) as status4:
+                    st.write("Reviewing the drafted blog post...")
+                    critique_report = critic_agent(topic, blog_post, llm_provider, llm_api_key, model_name)
+                    score = parse_score(critique_report)
+                    st.write(f"Critique generated. Score: {score}/10")
+                    status4.update(label=f"Agent 4: Critique Complete! Score: {score}/10", state="complete", expanded=False)
+                    
+                if score >= target_score:
+                    st.success(f"Target score reached ({score}/{target_score})!")
+                    break
+                else:
+                    if attempt < max_iterations:
+                        st.warning(f"Score {score} is below target {target_score}. Refining draft...")
+                    else:
+                        st.warning(f"Max iterations reached. Proceeding with the final draft (Score: {score}).")
+                
+                attempt += 1
                 
             # Display Final Outputs
             st.success("Pipeline executed successfully! 🎉")
