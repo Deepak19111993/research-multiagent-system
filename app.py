@@ -21,8 +21,13 @@ init_db()
 
 # Custom Robust Google OAuth Flow
 try:
-    with open('google_credentials.json', 'r') as f:
-        creds = json.load(f)['web']
+    if 'google_oauth' in st.secrets:
+        # Load from Streamlit Cloud Secrets
+        creds = st.secrets['google_oauth']
+    else:
+        # Load from local file
+        with open('google_credentials.json', 'r') as f:
+            creds = json.load(f)['web']
         
     client_id = creds['client_id']
     client_secret = creds['client_secret']
