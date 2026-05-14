@@ -4,9 +4,6 @@ from dotenv import load_dotenv
 from agents import searcher_agent, reader_agent, writer_agent, critic_agent, parse_score
 from utils import create_markdown_file, create_html_file, create_pdf_file, create_word_file
 from database import init_db, save_blog, get_user_blogs
-import urllib.parse
-import requests
-import json
 
 # Load environment variables from .env file if it exists
 load_dotenv()
@@ -19,79 +16,15 @@ st.set_page_config(page_title="Multi-Agent Research System", page_icon="🕵️"
 # Initialize DB
 init_db()
 
-# Custom Robust Google OAuth Flow
-try:
-    if 'google_oauth' in st.secrets:
-        # Load from Streamlit Cloud Secrets
-        creds = st.secrets['google_oauth']
-    else:
-        # Load from local file
-        with open('google_credentials.json', 'r') as f:
-            creds = json.load(f)['web']
-        
-    client_id = creds['client_id']
-    client_secret = creds['client_secret']
-    auth_uri = creds.get('auth_uri', 'https://accounts.google.com/o/oauth2/auth')
-    token_uri = creds.get('token_uri', 'https://oauth2.googleapis.com/token')
-    # Pulls the first redirect URI from your credentials file
-    redirect_uri = creds.get('redirect_uris', ['http://localhost:8501'])[0]
-    
-    if not st.session_state.get('connected'):
-        st.title("🕵️ Multi-Agent Research System")
-        st.markdown("Please log in with your Google account to access the research agents and save your blogs.")
-        
-        if 'code' in st.query_params:
-            # We got a code from Google, exchange it for a token
-            code = st.query_params['code']
-            data = {
-                'code': code,
-                'client_id': client_id,
-                'client_secret': client_secret,
-                'redirect_uri': redirect_uri,
-                'grant_type': 'authorization_code'
-            }
-            res = requests.post(token_uri, data=data)
-            
-            if res.status_code == 200:
-                access_token = res.json().get('access_token')
-                user_res = requests.get('https://www.googleapis.com/oauth2/v2/userinfo', headers={'Authorization': f'Bearer {access_token}'})
-                
-                if user_res.status_code == 200:
-                    st.session_state['connected'] = True
-                    st.session_state['user_info'] = user_res.json()
-                    st.query_params.clear()
-                    st.rerun()
-                else:
-                    st.error("Failed to fetch user profile from Google.")
-            else:
-                st.error("Login failed. Check your credentials.")
-                st.query_params.clear()
-        else:
-            # Show login button
-            scope = "https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile"
-            auth_url = f"{auth_uri}?client_id={client_id}&redirect_uri={urllib.parse.quote(redirect_uri)}&response_type=code&scope={urllib.parse.quote(scope)}&access_type=online"
-            st.markdown(f'<a href="{auth_url}" target="_self"><button style="background-color:#4285F4;color:white;padding:12px 20px;border-radius:5px;border:none;cursor:pointer;font-weight:bold;font-size:16px;">Login with Google</button></a>', unsafe_allow_html=True)
-            
-        st.stop() # Stop execution until logged in
-
-except FileNotFoundError:
-    st.error("google_credentials.json not found! Please create it.")
-    st.stop()
-except Exception as e:
-    st.error(f"OAuth Setup Error: {str(e)}")
-    st.stop()
+# Simple Username system to replace Google Auth
+st.sidebar.markdown("### 👤 User Profile")
+user_email = st.sidebar.text_input("Enter a username to load your history:", value="default_user")
+st.sidebar.markdown("---")
 
 # Initialize Session State
 if 'current_view' not in st.session_state:
     st.session_state.current_view = None
 
-user_info = st.session_state.get('user_info', {})
-user_email = user_info.get('email', 'unknown@example.com')
-
-st.sidebar.markdown(f"Logged in as **{user_info.get('name', 'User')}**")
-if st.sidebar.button("Logout"):
-    st.session_state.clear()
-    st.rerun()
 st.sidebar.markdown("---")
 
 st.title("🕵️ Multi-Agent Research System")
