@@ -89,97 +89,14 @@ with st.sidebar:
 topic = st.text_input("Enter the topic you want to research:")
 start_btn = st.button("Start Research 🚀")
 
-# Create an empty placeholder before the slow process starts.
-# This forces Streamlit to immediately clear the old blog from the screen!
+# Create placeholders for visual layout order
+status_container = st.empty()
 blog_display_area = st.empty()
 
-if start_btn:
-    if not tavily_api_key or not llm_api_key:
-        st.error(f"Please provide both Tavily and {llm_provider} API keys in the sidebar.")
-    elif not topic:
-        st.warning("Please enter a topic.")
-    else:
-        try:
-            # Agent 1: Searcher
-            with st.status("Agent 1: Searching for information...", expanded=True) as status1:
-                st.write(f"Searching Tavily for: '{topic}'")
-                search_results = searcher_agent(topic, tavily_api_key)
-                st.write(f"Found {len(search_results)} relevant sources.")
-                for res in search_results:
-                    st.markdown(f"- [{res['title']}]({res['url']})")
-                status1.update(label="Agent 1: Search Complete!", state="complete", expanded=False)
-                
-            # Agent 2: Reader
-            with st.status("Agent 2: Reading detailed content...", expanded=True) as status2:
-                st.write("Scraping and extracting text from the identified sources...")
-                detailed_context = reader_agent(search_results)
-                st.write("Finished reading sources.")
-                status2.update(label="Agent 2: Reading Complete!", state="complete", expanded=False)
-                
-            # Iterative Writing and Critiquing
-            max_iterations = 3
-            target_score = 8
-            attempt = 1
-            
-            blog_post = ""
-            critique_report = ""
-            
-            while attempt <= max_iterations:
-                st.markdown(f"### Iteration {attempt}/{max_iterations}")
-                
-                # Agent 3: Writer
-                with st.status(f"Agent 3: Writing the blog post (Attempt {attempt})...", expanded=True) as status3:
-                    if attempt == 1:
-                        st.write("Drafting a comprehensive blog post based on the context...")
-                        blog_post = writer_agent(topic, search_results, detailed_context, llm_provider, llm_api_key, model_name)
-                    else:
-                        st.write("Refining the blog post based on the critique...")
-                        blog_post = writer_agent(topic, search_results, detailed_context, llm_provider, llm_api_key, model_name, previous_draft=blog_post, critique=critique_report)
-                        
-                    st.write("Blog post written.")
-                    status3.update(label=f"Agent 3: Writing Complete (Attempt {attempt})!", state="complete", expanded=False)
-                    
-                # Agent 4: Critic
-                with st.status(f"Agent 4: Critiquing the blog post (Attempt {attempt})...", expanded=True) as status4:
-                    st.write("Reviewing the drafted blog post...")
-                    critique_report = critic_agent(topic, blog_post, llm_provider, llm_api_key, model_name)
-                    score = parse_score(critique_report)
-                    st.write(f"Critique generated. Score: {score}/10")
-                    status4.update(label=f"Agent 4: Critique Complete! Score: {score}/10", state="complete", expanded=False)
-                    
-                if score >= target_score:
-                    st.success(f"Target score reached ({score}/10)!")
-                    break
-                else:
-                    if attempt < max_iterations:
-                        st.warning(f"Score {score} is below target {target_score}. Refining draft...")
-                    else:
-                        st.warning(f"Max iterations reached. Proceeding with the final draft (Score: {score}).")
-                
-                attempt += 1
-                
-            # Generation successful, save to history
-            st.success("Pipeline executed successfully! 🎉")
-            
-            # Save directly to persistent SQLite database
-            save_blog(user_email, topic, blog_post, critique_report, score)
-            
-            # Re-fetch blogs to update the length
-            updated_blogs = get_user_blogs(user_email)
-            st.session_state.current_view = len(updated_blogs) - 1
-            
-            # Streamlit rerun to ensure the sidebar updates immediately
-            st.rerun()
-            
-        except Exception as e:
-            st.error(f"An error occurred: {str(e)}")
-
-# Re-fetch blogs for display block
+# 1. EVALUATE DISPLAY FIRST: This instantly clears the old blog if start_btn is True
 user_blogs = get_user_blogs(user_email)
-
-# Only show the previously selected blog if we are NOT currently generating a new one
-if not start_btn and st.session_state.current_view is not None and st.session_state.current_view < len(user_blogs):
-    with blog_display_area.container():
+with blog_display_area.container():
+    if not start_btn and st.session_state.current_view is not None and st.session_state.current_view < len(user_blogs):
         active_data = user_blogs[st.session_state.current_view]
         
         st.markdown("---")
@@ -188,27 +105,110 @@ if not start_btn and st.session_state.current_view is not None and st.session_st
         
         st.markdown("### 📥 Download Options")
         col1, col2, col3, col4 = st.columns(4)
-    
-    # Prepare files
-    md_bytes = create_markdown_file(active_data['blog_post'])
-    html_bytes = create_html_file(active_data['blog_post'])
-    pdf_bytes = create_pdf_file(active_data['blog_post'])
-    word_bytes = create_word_file(active_data['blog_post'])
-    
-    filename_base = active_data['topic'].lower().replace(" ", "_").replace("/", "_")
-    
-    # Add unique keys for buttons based on current view index to avoid duplicate key errors
-    view_key = st.session_state.current_view
-    
-    with col1:
-        st.download_button("Download Markdown", data=md_bytes, file_name=f"{filename_base}.md", mime="text/markdown", key=f"md_{view_key}")
-    with col2:
-        st.download_button("Download HTML", data=html_bytes, file_name=f"{filename_base}.html", mime="text/html", key=f"html_{view_key}")
-    with col3:
-        st.download_button("Download PDF", data=pdf_bytes, file_name=f"{filename_base}.pdf", mime="application/pdf", key=f"pdf_{view_key}")
-    with col4:
-        st.download_button("Download Word", data=word_bytes, file_name=f"{filename_base}.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", key=f"word_{view_key}")
-    
-    st.markdown("---")
-    st.header("🧐 Critic Report")
-    st.markdown(active_data['critique_report'])
+        
+        # Prepare files
+        md_bytes = create_markdown_file(active_data['blog_post'])
+        html_bytes = create_html_file(active_data['blog_post'])
+        pdf_bytes = create_pdf_file(active_data['blog_post'])
+        word_bytes = create_word_file(active_data['blog_post'])
+        
+        filename_base = active_data['topic'].lower().replace(" ", "_").replace("/", "_")
+        
+        # Add unique keys for buttons based on current view index to avoid duplicate key errors
+        view_key = st.session_state.current_view
+        
+        with col1:
+            st.download_button("Download Markdown", data=md_bytes, file_name=f"{filename_base}.md", mime="text/markdown", key=f"md_{view_key}")
+        with col2:
+            st.download_button("Download HTML", data=html_bytes, file_name=f"{filename_base}.html", mime="text/html", key=f"html_{view_key}")
+        with col3:
+            st.download_button("Download PDF", data=pdf_bytes, file_name=f"{filename_base}.pdf", mime="application/pdf", key=f"pdf_{view_key}")
+        with col4:
+            st.download_button("Download Word", data=word_bytes, file_name=f"{filename_base}.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", key=f"word_{view_key}")
+        
+        st.markdown("---")
+        st.header("🧐 Critic Report")
+        st.markdown(active_data['critique_report'])
+
+# 2. EVALUATE LONG-RUNNING PROCESS SECOND: The DOM is now clean!
+with status_container.container():
+    if start_btn:
+        if not tavily_api_key or not llm_api_key:
+            st.error(f"Please provide both Tavily and {llm_provider} API keys in the sidebar.")
+        elif not topic:
+            st.warning("Please enter a topic.")
+        else:
+            try:
+                # Agent 1: Searcher
+                with st.status("Agent 1: Searching for information...", expanded=True) as status1:
+                    st.write(f"Searching Tavily for: '{topic}'")
+                    search_results = searcher_agent(topic, tavily_api_key)
+                    st.write(f"Found {len(search_results)} relevant sources.")
+                    for res in search_results:
+                        st.markdown(f"- [{res['title']}]({res['url']})")
+                    status1.update(label="Agent 1: Search Complete!", state="complete", expanded=False)
+                    
+                # Agent 2: Reader
+                with st.status("Agent 2: Reading detailed content...", expanded=True) as status2:
+                    st.write("Scraping and extracting text from the identified sources...")
+                    detailed_context = reader_agent(search_results)
+                    st.write("Finished reading sources.")
+                    status2.update(label="Agent 2: Reading Complete!", state="complete", expanded=False)
+                    
+                # Iterative Writing and Critiquing
+                max_iterations = 3
+                target_score = 8
+                attempt = 1
+                
+                blog_post = ""
+                critique_report = ""
+                
+                while attempt <= max_iterations:
+                    st.markdown(f"### Iteration {attempt}/{max_iterations}")
+                    
+                    # Agent 3: Writer
+                    with st.status(f"Agent 3: Writing the blog post (Attempt {attempt})...", expanded=True) as status3:
+                        if attempt == 1:
+                            st.write("Drafting a comprehensive blog post based on the context...")
+                            blog_post = writer_agent(topic, search_results, detailed_context, llm_provider, llm_api_key, model_name)
+                        else:
+                            st.write("Refining the blog post based on the critique...")
+                            blog_post = writer_agent(topic, search_results, detailed_context, llm_provider, llm_api_key, model_name, previous_draft=blog_post, critique=critique_report)
+                            
+                        st.write("Blog post written.")
+                        status3.update(label=f"Agent 3: Writing Complete (Attempt {attempt})!", state="complete", expanded=False)
+                        
+                    # Agent 4: Critic
+                    with st.status(f"Agent 4: Critiquing the blog post (Attempt {attempt})...", expanded=True) as status4:
+                        st.write("Reviewing the drafted blog post...")
+                        critique_report = critic_agent(topic, blog_post, llm_provider, llm_api_key, model_name)
+                        score = parse_score(critique_report)
+                        st.write(f"Critique generated. Score: {score}/10")
+                        status4.update(label=f"Agent 4: Critique Complete! Score: {score}/10", state="complete", expanded=False)
+                        
+                    if score >= target_score:
+                        st.success(f"Target score reached ({score}/10)!")
+                        break
+                    else:
+                        if attempt < max_iterations:
+                            st.warning(f"Score {score} is below target {target_score}. Refining draft...")
+                        else:
+                            st.warning(f"Max iterations reached. Proceeding with the final draft (Score: {score}).")
+                    
+                    attempt += 1
+                    
+                # Generation successful, save to history
+                st.success("Pipeline executed successfully! 🎉")
+                
+                # Save directly to persistent SQLite database
+                save_blog(user_email, topic, blog_post, critique_report, score)
+                
+                # Re-fetch blogs to update the length
+                updated_blogs = get_user_blogs(user_email)
+                st.session_state.current_view = len(updated_blogs) - 1
+                
+                # Streamlit rerun to ensure the sidebar updates immediately
+                st.rerun()
+                
+            except Exception as e:
+                st.error(f"An error occurred: {str(e)}")
