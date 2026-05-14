@@ -127,6 +127,15 @@ def reader_agent(search_results: list) -> str:
             if response.status_code == 200:
                 soup = BeautifulSoup(response.text, 'html.parser')
                 
+                # Try to extract the best image (og:image or twitter:image)
+                og_image = soup.find('meta', property='og:image')
+                tw_image = soup.find('meta', attrs={'name': 'twitter:image'})
+                image_url = None
+                if og_image and og_image.get('content'):
+                    image_url = og_image['content']
+                elif tw_image and tw_image.get('content'):
+                    image_url = tw_image['content']
+                
                 # Remove script and style elements
                 for script in soup(["script", "style", "nav", "footer", "header"]):
                     script.extract()
@@ -137,7 +146,10 @@ def reader_agent(search_results: list) -> str:
                 # Truncate text to avoid massive token counts per page (e.g., 5000 chars)
                 text = text[:5000]
                 
-                detailed_context += f"\\n\\n--- Source: {url} ---\\n{text}"
+                detailed_context += f"\\n\\n--- Source: {url} ---\\n"
+                if image_url:
+                    detailed_context += f"Featured Image for this source: ![Image]({image_url})\\n\\n"
+                detailed_context += f"{text}"
             else:
                 detailed_context += f"\\n\\n--- Source: {url} ---\\n[Failed to retrieve content. Status: {response.status_code}]"
         except Exception as e:
@@ -160,7 +172,7 @@ Here is the previous draft:
 Here is the critique report from an expert editor:
 {critique}
 
-Please rewrite the blog post addressing all the feedback provided in the critique. Ensure the final output is comprehensive, highly readable, well-structured with headings, and uses Markdown formatting.
+Please rewrite the blog post addressing all the feedback provided in the critique. Ensure the final output is comprehensive, highly readable, well-structured with headings, and uses Markdown formatting. If any relevant Featured Images were provided in the context, be sure to include the best one at the top of your blog post.
 """
     else:
         prompt = f"""
@@ -173,6 +185,7 @@ Here is detailed content extracted from the web:
 {detailed_context}
 
 Write a well-structured blog post with an engaging introduction, informative body paragraphs with headings, and a clear conclusion. Use Markdown formatting. Make it insightful and easy to read.
+If the detailed context includes any "Featured Image" URLs in markdown format, please select the most relevant one and include it at the very top of your blog post!
 """
     return call_llm(provider, api_key, model_name, prompt)
 
