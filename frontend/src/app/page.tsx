@@ -38,6 +38,7 @@ export default function Home() {
   const [showTavilyKey, setShowTavilyKey] = useState(false);
   const [showLlmKey, setShowLlmKey] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
   useEffect(() => {
     const savedTavily = sessionStorage.getItem("tavilyKey");
@@ -63,7 +64,7 @@ export default function Home() {
 
   const fetchHistory = async (email: string) => {
     try {
-      const res = await fetch(`http://localhost:8000/api/history?user_email=${email}`);
+      const res = await fetch(`${API_BASE_URL}/api/history?user_email=${email}`);
       const data = await res.json();
       if (data.blogs) {
         setHistory(data.blogs);
@@ -99,7 +100,7 @@ export default function Home() {
     setResult(null);
 
     try {
-      const response = await fetch("http://localhost:8000/api/research", {
+      const response = await fetch(`${API_BASE_URL}/api/research`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -159,7 +160,7 @@ export default function Home() {
   const downloadFile = async (format: string) => {
     if (!result) return;
     try {
-      const res = await fetch("http://localhost:8000/api/download", {
+      const res = await fetch(`${API_BASE_URL}/api/download`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
