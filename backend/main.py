@@ -27,6 +27,18 @@ app.add_middleware(
 def on_startup():
     init_db()
 
+@app.get("/")
+def read_root():
+    return {
+        "status": "Online",
+        "message": "Multi-Agent Research API is running successfully.",
+        "endpoints": {
+            "research": "/api/research (POST)",
+            "history": "/api/history (GET)",
+            "download": "/api/download (POST)"
+        }
+    }
+
 class ResearchRequest(BaseModel):
     user_email: str
     topic: str
