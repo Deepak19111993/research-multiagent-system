@@ -38,7 +38,7 @@ export default function Home() {
   const [showTavilyKey, setShowTavilyKey] = useState(false);
   const [showLlmKey, setShowLlmKey] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://deepak2075-research-agent-api.hf.space";
 
   useEffect(() => {
     const savedTavily = sessionStorage.getItem("tavilyKey");
