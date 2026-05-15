@@ -11,3 +11,4 @@ anthropic
 markdown
 fpdf2
 python-docx
+psycopg2-binary
