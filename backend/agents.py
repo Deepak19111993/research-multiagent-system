@@ -144,7 +144,7 @@ def reader_agent(search_results: list) -> str:
                 text = soup.get_text(separator=' ', strip=True)
                 
                 # Truncate text to avoid massive token counts per page (e.g., 5000 chars)
-                text = text[:5000]
+                text = text[:3000]
                 
                 detailed_context += f"\\n\\n--- Source: {url} ---\\n"
                 if image_url:
