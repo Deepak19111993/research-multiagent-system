@@ -275,7 +275,7 @@ export default function Home() {
               <Select
                 value={llmProvider}
                 onValueChange={(val) => {
-                  setLlmProvider(val);
+                  setLlmProvider(val || "Gemini");
                   if (val === "Anthropic") setModelName("claude-3-5-sonnet-20241022");
                   else if (val === "Gemini") setModelName("gemini-2.5-flash");
                   else if (val === "OpenAI") setModelName("gpt-4o-mini");
