@@ -16,6 +16,32 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+const modelsByProvider: Record<string, { label: string; value: string }[]> = {
+  Gemini: [
+    { label: "gemini-2.5-flash (Fast & Free)", value: "gemini-2.5-flash" },
+    { label: "gemini-2.5-pro (Creative & Complex)", value: "gemini-2.5-pro" },
+    { label: "gemini-1.5-flash (Stable Flash)", value: "gemini-1.5-flash" },
+    { label: "gemini-1.5-pro (Stable Pro)", value: "gemini-1.5-pro" },
+  ],
+  OpenAI: [
+    { label: "gpt-4o-mini (Fast & Intelligent)", value: "gpt-4o-mini" },
+    { label: "gpt-4o (Premium Multi-Modal)", value: "gpt-4o" },
+    { label: "gpt-4-turbo (Stable Legacy Pro)", value: "gpt-4-turbo" },
+    { label: "o3-mini (Smart Reasoning)", value: "o3-mini" },
+  ],
+  Anthropic: [
+    { label: "claude-3-5-sonnet-20241022 (Default Pro)", value: "claude-3-5-sonnet-20241022" },
+    { label: "claude-3-5-haiku-20241022 (Super Fast)", value: "claude-3-5-haiku-20241022" },
+    { label: "claude-3-opus-20240229 (Complex Reasoning)", value: "claude-3-opus-20240229" },
+  ],
+  HuggingFace: [
+    { label: "Qwen/Qwen2.5-72B-Instruct (Smartest 72B)", value: "Qwen/Qwen2.5-72B-Instruct" },
+    { label: "meta-llama/Llama-3.3-70B-Instruct (State-of-the-Art Llama)", value: "meta-llama/Llama-3.3-70B-Instruct" },
+    { label: "meta-llama/Meta-Llama-3-8B-Instruct (Ultra Fast 8B)", value: "meta-llama/Meta-Llama-3-8B-Instruct" },
+    { label: "mistralai/Mistral-7B-Instruct-v0.3 (Sleek Mistral)", value: "mistralai/Mistral-7B-Instruct-v0.3" },
+  ],
+};
+
 export default function Home() {
   const [topic, setTopic] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -197,6 +223,9 @@ export default function Home() {
     }
   };
 
+  const currentModelList = modelsByProvider[llmProvider] || [];
+  const isCustomModel = modelName !== "" && !currentModelList.some((m) => m.value === modelName);
+
   return (
     <div className="min-h-screen flex w-full bg-[#0a0a0a] text-slate-100 selection:bg-indigo-500/30 font-sans">
 
@@ -322,11 +351,41 @@ export default function Home() {
 
             <div className="space-y-2">
               <Label className="flex items-center gap-2 text-slate-400 text-xs font-semibold uppercase tracking-wider"><Settings size={14} /> Model Name</Label>
-              <Input
-                value={modelName}
-                onChange={(e) => setModelName(e.target.value)}
-                className="bg-white/5 border-white/10 text-white placeholder:text-slate-600 focus-visible:ring-indigo-500 focus-visible:border-indigo-500 h-10"
-              />
+              <Select
+                value={isCustomModel ? "custom" : modelName}
+                onValueChange={(val) => {
+                  if (val === "custom") {
+                    setModelName("");
+                  } else {
+                    setModelName(val || "");
+                  }
+                }}
+              >
+                <SelectTrigger className="bg-white/5 border-white/10 text-white focus:ring-indigo-500 focus:border-indigo-500 h-10">
+                  <SelectValue placeholder="Select a model" />
+                </SelectTrigger>
+                <SelectContent className="bg-[#1a1a1a] border-white/10 text-white">
+                  {currentModelList.map((m) => (
+                    <SelectItem key={m.value} value={m.value} className="focus:bg-indigo-500/20 focus:text-white">
+                      {m.label}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="custom" className="focus:bg-indigo-500/20 focus:text-white font-semibold text-indigo-400">
+                    Custom Model...
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              
+              {(isCustomModel || modelName === "") && (
+                <div className="pt-1">
+                  <Input
+                    value={modelName}
+                    onChange={(e) => setModelName(e.target.value)}
+                    placeholder="Enter custom model ID (e.g. meta-llama/Llama-3-8b)"
+                    className="bg-white/5 border-white/10 text-white placeholder:text-slate-600 focus-visible:ring-indigo-500 focus-visible:border-indigo-500 h-10"
+                  />
+                </div>
+              )}
             </div>
 
             <Button
