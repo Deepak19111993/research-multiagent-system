@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Loader2, Key, Settings, History, CheckCircle, FileText, Download, User, Sparkles, Send, Eye, EyeOff, LogOut, LogIn, AlertTriangle } from "lucide-react";
+import { Search, Loader2, Key, Settings, History, CheckCircle, FileText, Download, User, Sparkles, Send, Eye, EyeOff, LogOut, LogIn, AlertTriangle, BookOpen, HelpCircle, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -23,6 +23,7 @@ export default function Home() {
   const [statusText, setStatusText] = useState("");
   const [result, setResult] = useState<any>(null);
   const [errorText, setErrorText] = useState("");
+  const [showDocs, setShowDocs] = useState(false);
 
   // Settings state
   const [userEmail, setUserEmail] = useState("");
@@ -339,6 +340,18 @@ export default function Home() {
       {/* MAIN CONTENT AREA */}
       <main className="flex-1 flex flex-col h-screen overflow-y-auto overflow-x-hidden relative z-10">
 
+        {/* Documentation Link in Top Right Corner */}
+        <div className="absolute top-6 right-6 md:top-8 md:right-8 z-50">
+          <Button
+            onClick={() => setShowDocs(true)}
+            variant="outline"
+            className="flex items-center gap-2 border-white/10 bg-[#18181b]/60 backdrop-blur-md text-slate-300 hover:text-white hover:bg-white/10 hover:border-indigo-500/40 rounded-full px-5 py-2 font-bold text-sm transition-all duration-300 shadow-lg hover:shadow-indigo-500/10"
+          >
+            <BookOpen size={16} className="text-indigo-400" />
+            <span>How it Works</span>
+          </Button>
+        </div>
+
         {/* Background Gradients */}
         <div className="absolute inset-0 z-0 pointer-events-none opacity-40">
           <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-indigo-600/30 blur-[120px]" />
@@ -589,6 +602,155 @@ export default function Home() {
           )}
         </div>
       </main>
+
+      {/* Documentation Modal */}
+      <AnimatePresence>
+        {showDocs && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+            {/* Modal Container */}
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              transition={{ type: "spring", duration: 0.5 }}
+              className="bg-[#0f0f13] border border-white/10 rounded-3xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden relative"
+            >
+              {/* Top border accent line */}
+              <div className="h-1.5 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500" />
+
+              {/* Close Button */}
+              <button
+                onClick={() => setShowDocs(false)}
+                className="absolute top-6 right-6 p-2 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 text-slate-400 hover:text-white transition-all duration-300 z-10"
+              >
+                <X size={18} />
+              </button>
+
+              {/* Modal Header */}
+              <div className="p-8 pb-4 border-b border-white/5">
+                <div className="flex items-center gap-3 mb-2">
+                  <Sparkles className="text-indigo-400 animate-pulse" size={24} />
+                  <span className="text-xs font-bold uppercase tracking-wider text-indigo-400 bg-indigo-500/10 px-2.5 py-1 rounded-full">System Architecture</span>
+                </div>
+                <h2 className="text-2xl md:text-3xl font-black text-white">How the Multi-Agent Researcher Works</h2>
+                <p className="text-slate-400 text-sm mt-1">Our autonomous AI system operates via 4 specialized agents collaborating in a sequential pipelined execution.</p>
+              </div>
+
+              {/* Modal Scrollable Body */}
+              <ScrollArea className="flex-1 p-8 overflow-y-auto">
+                <div className="flex flex-col gap-8 pb-4">
+                  
+                  {/* Step-by-Step Workflow Pipeline Map */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-black/30 border border-white/5 p-6 rounded-2xl">
+                    <div className="flex flex-col items-center text-center p-3">
+                      <div className="w-10 h-10 rounded-full bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center font-bold text-indigo-300 mb-3">1</div>
+                      <h4 className="text-sm font-bold text-white mb-1">Search Agent</h4>
+                      <p className="text-xs text-slate-400">Scours Tavily for top 5 web sources</p>
+                    </div>
+                    <div className="flex flex-col items-center text-center p-3 relative">
+                      <div className="hidden md:block absolute top-[28px] left-[-30px] w-[50px] h-[1px] bg-white/15" />
+                      <div className="w-10 h-10 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center font-bold text-purple-300 mb-3">2</div>
+                      <h4 className="text-sm font-bold text-white mb-1">Extraction Agent</h4>
+                      <p className="text-xs text-slate-400">Extracts raw text content via scraping</p>
+                    </div>
+                    <div className="flex flex-col items-center text-center p-3 relative">
+                      <div className="hidden md:block absolute top-[28px] left-[-30px] w-[50px] h-[1px] bg-white/15" />
+                      <div className="w-10 h-10 rounded-full bg-pink-500/20 border border-pink-500/40 flex items-center justify-center font-bold text-pink-300 mb-3">3</div>
+                      <h4 className="text-sm font-bold text-white mb-1">Writer Agent</h4>
+                      <p className="text-xs text-slate-400">Drafts complete structured article</p>
+                    </div>
+                    <div className="flex flex-col items-center text-center p-3 relative">
+                      <div className="hidden md:block absolute top-[28px] left-[-30px] w-[50px] h-[1px] bg-white/15" />
+                      <div className="w-10 h-10 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center font-bold text-emerald-300 mb-3">4</div>
+                      <h4 className="text-sm font-bold text-white mb-1">Critic Agent</h4>
+                      <p className="text-xs text-slate-400">Grades structure and refines output</p>
+                    </div>
+                  </div>
+
+                  {/* Detailed Agent Breakdown */}
+                  <div className="flex flex-col gap-4">
+                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                      <CheckCircle size={18} className="text-indigo-400" />
+                      Detailed Agent Directory
+                    </h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Search Agent card */}
+                      <div className="bg-white/5 border border-white/5 p-5 rounded-2xl">
+                        <div className="flex justify-between items-start mb-3">
+                          <h4 className="font-bold text-white text-base">🔍 Agent 1: Search Agent</h4>
+                          <span className="text-[10px] uppercase font-bold tracking-wider text-indigo-300 bg-indigo-500/10 px-2 py-0.5 rounded-full">Tavily Engine</span>
+                        </div>
+                        <p className="text-slate-300 text-xs leading-relaxed">
+                          Takes your research query and uses the high-precision Tavily API to execute multi-dimensional search queries, extracting the top 5 web sources, article headers, and high-relevancy snippets.
+                        </p>
+                      </div>
+
+                      {/* Content Scraper card */}
+                      <div className="bg-white/5 border border-white/5 p-5 rounded-2xl">
+                        <div className="flex justify-between items-start mb-3">
+                          <h4 className="font-bold text-white text-base">📄 Agent 2: Content Extractor</h4>
+                          <span className="text-[10px] uppercase font-bold tracking-wider text-purple-300 bg-purple-500/10 px-2 py-0.5 rounded-full">Scraper Engine</span>
+                        </div>
+                        <p className="text-slate-300 text-xs leading-relaxed">
+                          Crawls the retrieved search result URLs using BeautifulSoup. It sanitizes the raw HTML payload, strips away tracking codes or redundant text, and compiles clean content feeds for the writers.
+                        </p>
+                      </div>
+
+                      {/* Writer Agent card */}
+                      <div className="bg-white/5 border border-white/5 p-5 rounded-2xl">
+                        <div className="flex justify-between items-start mb-3">
+                          <h4 className="font-bold text-white text-base">✍️ Agent 3: Content Writer</h4>
+                          <span className="text-[10px] uppercase font-bold tracking-wider text-pink-300 bg-pink-500/10 px-2 py-0.5 rounded-full">LLM Engine</span>
+                        </div>
+                        <p className="text-slate-300 text-xs leading-relaxed">
+                          Processes the accumulated context and details. Using your designated LLM model, it authors a highly readable, comprehensive blog post complete with title, rich headings, and formatting.
+                        </p>
+                      </div>
+
+                      {/* Critic Agent card */}
+                      <div className="bg-white/5 border border-white/5 p-5 rounded-2xl">
+                        <div className="flex justify-between items-start mb-3">
+                          <h4 className="font-bold text-white text-base">🛡️ Agent 4: Editor & Critic</h4>
+                          <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded-full">Evaluation Engine</span>
+                        </div>
+                        <p className="text-slate-300 text-xs leading-relaxed">
+                          Conducts a formal editorial review. Evaluates information depth, structure, and formatting, assigns a score out of 10, and runs a revision pass to refine the article to perfection.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* How to Get Started Configuration */}
+                  <div className="bg-indigo-500/5 border border-indigo-500/15 p-6 rounded-2xl">
+                    <h3 className="text-base font-bold text-white mb-2 flex items-center gap-2">
+                      <Key size={16} className="text-indigo-400" />
+                      Configuration Guide (How to Start)
+                    </h3>
+                    <ul className="text-xs text-slate-300 space-y-2 list-disc list-inside">
+                      <li>Enter a persistent **email address** to sign in and automatically synchronize your blog history.</li>
+                      <li>Acquire a Tavily key from <a href="https://tavily.com" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:underline">tavily.com</a> and paste it into the **Tavily API Key** field.</li>
+                      <li>Select your LLM provider (e.g. Gemini) and obtain a key from <a href="https://aistudio.google.com" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:underline">Google AI Studio</a>.</li>
+                      <li>Paste the keys, click **Save Settings**, enter a research topic, and witness the multi-agent system execute!</li>
+                    </ul>
+                  </div>
+
+                </div>
+              </ScrollArea>
+
+              {/* Modal Footer */}
+              <div className="p-6 border-t border-white/5 bg-black/20 flex justify-end">
+                <Button
+                  onClick={() => setShowDocs(false)}
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-6 h-10 rounded-full transition-all shadow-[0_0_15px_rgba(79,70,229,0.3)]"
+                >
+                  Got it, close Docs
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
