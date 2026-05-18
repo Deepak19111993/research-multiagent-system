@@ -286,6 +286,7 @@ export default function Home() {
                   if (val === "Anthropic") setModelName("claude-3-5-sonnet-20241022");
                   else if (val === "Gemini") setModelName("gemini-2.5-flash");
                   else if (val === "OpenAI") setModelName("gpt-4o-mini");
+                  else if (val === "HuggingFace") setModelName("Qwen/Qwen2.5-72B-Instruct");
                 }}
               >
                 <SelectTrigger className="bg-white/5 border-white/10 text-white focus:ring-indigo-500 focus:border-indigo-500 h-10">
@@ -295,6 +296,7 @@ export default function Home() {
                   <SelectItem value="Anthropic" className="focus:bg-indigo-500/20 focus:text-white">Anthropic</SelectItem>
                   <SelectItem value="Gemini" className="focus:bg-indigo-500/20 focus:text-white">Gemini</SelectItem>
                   <SelectItem value="OpenAI" className="focus:bg-indigo-500/20 focus:text-white">OpenAI</SelectItem>
+                  <SelectItem value="HuggingFace" className="focus:bg-indigo-500/20 focus:text-white">Hugging Face</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -727,10 +729,10 @@ export default function Home() {
                       <Key size={16} className="text-indigo-400" />
                       Configuration Guide (How to Start)
                     </h3>
-                    <ul className="text-xs text-slate-300 space-y-2 list-disc list-inside">
+                     <ul className="text-xs text-slate-300 space-y-2 list-disc list-inside">
                       <li>Enter a persistent **email address** to sign in and automatically synchronize your blog history.</li>
                       <li>Acquire a Tavily key from <a href="https://tavily.com" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:underline">tavily.com</a> and paste it into the **Tavily API Key** field.</li>
-                      <li>Select your LLM provider (e.g. Gemini) and obtain a key from <a href="https://aistudio.google.com" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:underline">Google AI Studio</a>.</li>
+                      <li>Select your LLM provider. You can choose **Gemini** (key from <a href="https://aistudio.google.com" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:underline">Google AI Studio</a>) or **Hugging Face** (free user access token from <a href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:underline">huggingface.co</a>).</li>
                       <li>Paste the keys, click **Save Settings**, enter a research topic, and witness the multi-agent system execute!</li>
                     </ul>
                   </div>
