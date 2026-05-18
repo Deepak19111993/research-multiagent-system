@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Loader2, Key, Settings, History, CheckCircle, FileText, Download, User, Sparkles, Send, Eye, EyeOff, LogOut, LogIn } from "lucide-react";
-import { useSession, signIn, signOut } from "next-auth/react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -18,7 +17,6 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function Home() {
-  const { data: session, status } = useSession();
   const [topic, setTopic] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -26,7 +24,9 @@ export default function Home() {
   const [result, setResult] = useState<any>(null);
 
   // Settings state
-  const userEmail = session?.user?.email || "";
+  const [userEmail, setUserEmail] = useState("");
+  const [tempEmail, setTempEmail] = useState("");
+  const [isClient, setIsClient] = useState(false);
   const [tavilyKey, setTavilyKey] = useState("");
   const [llmProvider, setLlmProvider] = useState("Gemini");
   const [llmKey, setLlmKey] = useState("");
@@ -41,6 +41,13 @@ export default function Home() {
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://deepak2075-research-agent-api.hf.space";
 
   useEffect(() => {
+    setIsClient(true);
+    const savedEmail = localStorage.getItem("user_email");
+    if (savedEmail) {
+      setUserEmail(savedEmail);
+      setTempEmail(savedEmail);
+    }
+
     const savedTavily = sessionStorage.getItem("tavilyKey");
     if (savedTavily) setTavilyKey(savedTavily);
 
@@ -55,12 +62,12 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (session?.user?.email) {
-      fetchHistory(session.user.email);
+    if (userEmail) {
+      fetchHistory(userEmail);
     } else {
       setHistory([]);
     }
-  }, [session]);
+  }, [userEmail]);
 
   const fetchHistory = async (email: string) => {
     try {
@@ -199,31 +206,47 @@ export default function Home() {
           <div className="space-y-6 py-6 px-6">
             <div className="space-y-3 bg-white/5 border border-white/10 rounded-xl p-4 shadow-inner">
               <Label className="flex items-center gap-2 text-slate-400 text-xs font-semibold uppercase tracking-wider"><User size={14} /> Account</Label>
-              {status === "loading" ? (
+              {!isClient ? (
                 <div className="flex items-center justify-center h-10"><Loader2 className="animate-spin text-slate-500" size={20} /></div>
-              ) : session ? (
+              ) : userEmail ? (
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3 overflow-hidden">
-                    {session.user?.image ? (
-                      <img src={session.user.image} alt="Avatar" className="w-8 h-8 rounded-full border border-indigo-500/30" />
-                    ) : (
-                      <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-white text-xs shrink-0">
-                        {session.user?.name?.charAt(0) || "U"}
-                      </div>
-                    )}
+                    <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-white text-xs shrink-0">
+                      {userEmail.charAt(0).toUpperCase() || "U"}
+                    </div>
                     <div className="truncate">
-                      <p className="text-sm font-bold text-white truncate">{session.user?.name}</p>
-                      <p className="text-xs text-slate-400 truncate">{session.user?.email}</p>
+                      <p className="text-sm font-bold text-white truncate">{userEmail.split("@")[0]}</p>
+                      <p className="text-xs text-slate-400 truncate">{userEmail}</p>
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon" onClick={() => signOut()} className="text-slate-400 hover:text-red-400 hover:bg-red-500/10 shrink-0" title="Sign out">
+                  <Button variant="ghost" size="icon" onClick={() => {
+                    localStorage.removeItem("user_email");
+                    setUserEmail("");
+                    setTempEmail("");
+                  }} className="text-slate-400 hover:text-red-400 hover:bg-red-500/10 shrink-0" title="Sign out">
                     <LogOut size={16} />
                   </Button>
                 </div>
               ) : (
-                <Button onClick={() => signIn("google")} className="w-full bg-white text-black hover:bg-slate-200 font-bold flex items-center gap-2 shadow-[0_0_15px_rgba(255,255,255,0.1)]">
-                  <LogIn size={16} /> Sign in with Google
-                </Button>
+                <div className="space-y-2">
+                  <Input
+                    type="email"
+                    placeholder="Enter email / username"
+                    value={tempEmail}
+                    onChange={(e) => setTempEmail(e.target.value)}
+                    className="bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus-visible:ring-indigo-500 h-9"
+                  />
+                  <Button onClick={() => {
+                    if (tempEmail.trim()) {
+                      localStorage.setItem("user_email", tempEmail.trim());
+                      setUserEmail(tempEmail.trim());
+                    } else {
+                      alert("Please enter an email or username");
+                    }
+                  }} className="w-full bg-white text-black hover:bg-slate-200 font-bold flex items-center justify-center gap-2 h-9">
+                    <LogIn size={16} /> Log In
+                  </Button>
+                </div>
               )}
             </div>
 
@@ -379,7 +402,7 @@ export default function Home() {
                   />
                   <button
                     onClick={startResearch}
-                    disabled={isGenerating || !topic || !session}
+                    disabled={isGenerating || !topic || !userEmail}
                     className="flex items-center justify-center bg-indigo-600 hover:bg-indigo-500 text-white h-14 px-8 rounded-full font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(79,70,229,0.4)] mr-1"
                   >
                     {isGenerating ? <Loader2 className="animate-spin mr-2" size={20} /> : <Send size={18} className="mr-2" />}
