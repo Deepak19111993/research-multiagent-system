@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Loader2, Key, Settings, History, CheckCircle, FileText, Download, User, Sparkles, Send, Eye, EyeOff, LogOut, LogIn } from "lucide-react";
+import { Search, Loader2, Key, Settings, History, CheckCircle, FileText, Download, User, Sparkles, Send, Eye, EyeOff, LogOut, LogIn, AlertTriangle } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -22,6 +22,7 @@ export default function Home() {
   const [progress, setProgress] = useState(0);
   const [statusText, setStatusText] = useState("");
   const [result, setResult] = useState<any>(null);
+  const [errorText, setErrorText] = useState("");
 
   // Settings state
   const [userEmail, setUserEmail] = useState("");
@@ -105,6 +106,7 @@ export default function Home() {
     setProgress(10);
     setStatusText("Initializing Agents...");
     setResult(null);
+    setErrorText("");
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/research`, {
@@ -138,6 +140,7 @@ export default function Home() {
               const data = JSON.parse(line.substring(6));
               if (data.error) {
                 setStatusText(`Error: ${data.error}`);
+                setErrorText(data.error);
                 setIsGenerating(false);
                 return;
               }
@@ -159,8 +162,9 @@ export default function Home() {
       }
       setIsGenerating(false);
       setProgress(100);
-    } catch (e) {
+    } catch (e: any) {
       setStatusText("An error occurred during generation.");
+      setErrorText(e.message || "An error occurred during generation.");
       setIsGenerating(false);
       console.error(e);
     }
@@ -412,6 +416,37 @@ export default function Home() {
                   </button>
                 </div>
               </div>
+
+              {/* Error Message Alert Card */}
+              <AnimatePresence>
+                {errorText && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="max-w-3xl mx-auto w-full"
+                  >
+                    <div className="bg-red-500/10 border border-red-500/20 rounded-3xl p-6 shadow-2xl flex items-start gap-4 backdrop-blur-md relative overflow-hidden">
+                      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 to-rose-600" />
+                      <AlertTriangle className="text-red-400 shrink-0 mt-0.5" size={24} />
+                      <div>
+                        <h4 className="text-lg font-bold text-white mb-1">Research Generation Failed</h4>
+                        <p className="text-slate-300 text-sm leading-relaxed mb-3">
+                          The multi-agent system encountered an issue while generating your blog post:
+                        </p>
+                        <div className="bg-black/30 border border-white/5 rounded-xl p-4 font-mono text-red-300 text-xs break-words leading-relaxed select-all">
+                          {errorText}
+                        </div>
+                        {errorText.includes("RESOURCE_EXHAUSTED") && (
+                          <p className="mt-4 text-xs text-slate-400 bg-white/5 border border-white/10 p-3 rounded-lg leading-relaxed">
+                            💡 <strong>Tip:</strong> Your Gemini API Key has exceeded its daily free tier quota (rate limit). Please wait for Google to reset the daily limit, link a billing account in Google AI Studio for unlimited requests, or try a different key/provider!
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* Progress */}
               <AnimatePresence>
