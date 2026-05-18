@@ -157,6 +157,8 @@ export default function Home() {
           }
         }
       }
+      setIsGenerating(false);
+      setProgress(100);
     } catch (e) {
       setStatusText("An error occurred during generation.");
       setIsGenerating(false);
