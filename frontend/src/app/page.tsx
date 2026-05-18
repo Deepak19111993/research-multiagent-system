@@ -537,7 +537,12 @@ export default function Home() {
                         </div>
                       </div>
                       <p className="text-slate-400 text-base line-clamp-2 leading-relaxed">
-                        {item.blog_post.substring(0, 200)}...
+                        {item.blog_post
+                          .replace(/!\[.*?\]\(.*?\)/g, "") // Remove markdown image links
+                          .replace(/[#*`_]/g, "")           // Remove markdown headers/formatting
+                          .replace(/\s+/g, " ")             // Normalize spaces and newlines
+                          .trim()
+                          .substring(0, 200)}...
                       </p>
                     </div>
                   ))}
